@@ -39,9 +39,9 @@ import (
 	"strings"
 )
 
-func getOptions(dest interface{}) []option {
+func getOptions(dest interface{}) map[string]*option {
 	t := reflect.Indirect(reflect.ValueOf(dest)).Type()
-	options := make([]option, 0, 10)
+	options := make(map[string]*option, 10)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		opt := option{section: "default"}
@@ -77,7 +77,7 @@ func getOptions(dest interface{}) []option {
 
 		tag := f.Tag.Get("conflag")
 		if tag != "" {
-			parts := strings.Split(tag, ",")
+			parts := strings.Split(tag, "|")
 
 			name := parts[0]
 			nameParts := strings.Split(name, ".")
@@ -95,9 +95,13 @@ func getOptions(dest interface{}) []option {
 				)
 			}
 
-			if len(parts) == 2 {
+			if len(parts) > 1 {
+				opt.usage = parts[1]
+			}
+
+			if len(parts) > 2 {
 				opt.read = true
-				def := parts[1]
+				def := parts[2]
 				var format string
 				var dest interface{}
 				switch opt.typeOf {
@@ -126,7 +130,7 @@ func getOptions(dest interface{}) []option {
 				}
 			}
 
-			if len(parts) > 2 {
+			if len(parts) > 3 {
 				panic(
 					fmt.Errorf(
 						"conflag: Too many parts to field tag for %s.",
@@ -136,7 +140,11 @@ func getOptions(dest interface{}) []option {
 			}
 		}
 
-		options = append(options, opt)
+		fullName := opt.name
+		if opt.section != "default" {
+			fullName = opt.section + "." + opt.name
+		}
+		options[fullName] = &opt
 	}
 
 	return options

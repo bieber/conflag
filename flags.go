@@ -31,51 +31,55 @@
  *
  */
 
-/*
- Package conflag simplifies program configuration by accumulating
- options from both a config file and command-line flags.  You specify
- the options you require by defining a struct type to express your
- program's configuration.
-*/
 package conflag
 
 import (
-	"fmt"
+	"flag"
 )
 
-type option struct {
-	// Identification
-	name    string
-	section string
-	usage   string
+func readFlags(options map[string]*option, configFile string) string {
+	flag.StringVar(
+		&configFile,
+		"config-file",
+		configFile,
+		"Custom config file path",
+	)
+	for _, option := range options {
+		name := option.name
+		if option.section != "default" {
+			name = option.section + "." + option.name
+		}
 
-	// Type of the field
-	typeOf string
-
-	// Has it been read yet?
-	read bool
-
-	// Possible value fields
-	boolVal   bool
-	floatVal  float64
-	intVal    int
-	stringVal string
-}
-
-// ReadConfig reads configuration from the configuration file and the
-// command line, filling in options in the provided destination
-// struct.  If your destination struct is improperly configured, it
-// will panic.  If required options aren't provided by the user, it
-// will return an error.
-//
-// dest should be a pointer to your result struct, and configFile the
-// default location to load the configuration file from.
-func ReadConfig(dest interface{}, configFile string) error {
-	options := getOptions(dest)
-	configFile = readFlags(options, configFile)
-
-	for _, v := range options {
-		fmt.Println(v)
+		switch option.typeOf {
+		case "bool":
+			flag.BoolVar(&option.boolVal, name, option.boolVal, option.usage)
+		case "float64":
+			flag.Float64Var(
+				&option.floatVal,
+				name,
+				option.floatVal,
+				option.usage,
+			)
+		case "int":
+			flag.IntVar(&option.intVal, name, option.intVal, option.usage)
+		case "string":
+			flag.StringVar(
+				&option.stringVal,
+				name,
+				option.stringVal,
+				option.usage,
+			)
+		}
 	}
-	return nil
+
+	flag.Parse()
+	flag.Visit(
+		func(f *flag.Flag) {
+			if option, ok := options[f.Name]; ok {
+				option.read = true
+			}
+		},
+	)
+
+	return configFile
 }
