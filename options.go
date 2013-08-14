@@ -44,7 +44,7 @@ func getOptions(dest interface{}) map[string]*option {
 	options := make(map[string]*option, 10)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
-		opt := option{section: "default"}
+		opt := option{section: "default", structField: f.Name}
 
 		opt.name = strings.ToLower(f.Name)
 		if f.Type.PkgPath() != "" {
@@ -148,4 +148,21 @@ func getOptions(dest interface{}) map[string]*option {
 	}
 
 	return options
+}
+
+func setOptions(dest interface{}, options map[string]*option) {
+	val := reflect.Indirect(reflect.ValueOf(dest))
+	for _, option := range options {
+		field := val.FieldByName(option.structField)
+		switch option.typeOf {
+		case "bool":
+			field.SetBool(option.boolVal)
+		case "float64":
+			field.SetFloat(option.floatVal)
+		case "int":
+			field.SetInt(int64(option.intVal))
+		case "string":
+			field.SetString(option.stringVal)
+		}
+	}
 }

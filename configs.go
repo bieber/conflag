@@ -34,6 +34,7 @@
 package conflag
 
 import (
+	"code.google.com/p/goconf/conf"
 	"flag"
 )
 
@@ -77,9 +78,48 @@ func readFlags(options map[string]*option, configFile string) string {
 		func(f *flag.Flag) {
 			if option, ok := options[f.Name]; ok {
 				option.read = true
+				option.readFromFlag = true
 			}
 		},
 	)
 
 	return configFile
+}
+
+func readFile(options map[string]*option, configFile string) {
+	c, err := conf.ReadConfigFile(configFile)
+	if err != nil {
+		return
+	}
+
+	for _, option := range options {
+		if !option.readFromFlag && c.HasOption(option.section, option.name) {
+			switch option.typeOf {
+			case "bool":
+				val, err := c.GetBool(option.section, option.name)
+				if err == nil {
+					option.boolVal = val
+					option.read = true
+				}
+			case "float64":
+				val, err := c.GetFloat64(option.section, option.name)
+				if err == nil {
+					option.floatVal = val
+					option.read = true
+				}
+			case "int":
+				val, err := c.GetInt(option.section, option.name)
+				if err == nil {
+					option.intVal = val
+					option.read = true
+				}
+			case "string":
+				val, err := c.GetString(option.section, option.name)
+				if err == nil {
+					option.stringVal = val
+					option.read = true
+				}
+			}
+		}
+	}
 }

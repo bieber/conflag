@@ -41,19 +41,22 @@ package conflag
 
 import (
 	"fmt"
+	"strings"
 )
 
 type option struct {
 	// Identification
-	name    string
-	section string
-	usage   string
+	name        string
+	section     string
+	structField string
+	usage       string
 
 	// Type of the field
 	typeOf string
 
 	// Has it been read yet?
-	read bool
+	read         bool
+	readFromFlag bool
 
 	// Possible value fields
 	boolVal   bool
@@ -73,9 +76,24 @@ type option struct {
 func ReadConfig(dest interface{}, configFile string) error {
 	options := getOptions(dest)
 	configFile = readFlags(options, configFile)
+	readFile(options, configFile)
+	setOptions(dest, options)
 
-	for _, v := range options {
-		fmt.Println(v)
+	missingOptions := make([]string, 0, 10)
+	for _, option := range options {
+		if !option.read {
+			missingOptions = append(
+				missingOptions,
+				option.section+"."+option.name,
+			)
+		}
 	}
+	if len(missingOptions) > 0 {
+		return fmt.Errorf(
+			"Missing options: %s",
+			strings.Join(missingOptions, ","),
+		)
+	}
+
 	return nil
 }
