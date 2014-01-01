@@ -1,13 +1,11 @@
 Conflag
 =======
 
-conflag aims to make program configuration as simple as possible.  It
-allows you to specify your configuration schema as a struct type with
-field tags for more fine-grained control.  Just pass a pointer to an
-instance of your config struct to the ReadConfig function along with a
-file path to a config file, and conflag will automatically read
-options first from the command-line, then from the config file, and
-finally from a default if necessary.
+conflag is a library for streamlined configuration loading from a
+combination of built-in defaults, config files, and command-line
+flags.  It's currently in a non-working state on its way to a new API
+and implementation, for a working (but wholly different) version of
+the library you can check out the v0.1 tag.
 
 Installation
 ------------
