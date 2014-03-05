@@ -40,21 +40,42 @@ import (
 	"strings"
 )
 
-var allowedTypes = map[reflect.Kind]bool{
-	reflect.Bool:    true,
-	reflect.Int:     true,
-	reflect.Int8:    true,
-	reflect.Int16:   true,
-	reflect.Int32:   true,
-	reflect.Int64:   true,
-	reflect.Uint:    true,
-	reflect.Uint8:   true,
-	reflect.Uint16:  true,
-	reflect.Uint32:  true,
-	reflect.Uint64:  true,
-	reflect.Float32: true,
-	reflect.Float64: true,
-	reflect.String:  true,
+type fieldType int
+
+const (
+	invalidFieldType fieldType = iota
+	boolFieldType
+	intFieldType
+	uintFieldType
+	floatFieldType
+	stringFieldType
+)
+
+var allowedTypes = map[fieldType]map[reflect.Kind]bool{
+	boolFieldType: map[reflect.Kind]bool{
+		reflect.Bool: true,
+	},
+	intFieldType: map[reflect.Kind]bool{
+		reflect.Int:   true,
+		reflect.Int8:  true,
+		reflect.Int16: true,
+		reflect.Int32: true,
+		reflect.Int64: true,
+	},
+	uintFieldType: map[reflect.Kind]bool{
+		reflect.Uint:   true,
+		reflect.Uint8:  true,
+		reflect.Uint16: true,
+		reflect.Uint32: true,
+		reflect.Uint64: true,
+	},
+	floatFieldType: map[reflect.Kind]bool{
+		reflect.Float32: true,
+		reflect.Float64: true,
+	},
+	stringFieldType: map[reflect.Kind]bool{
+		reflect.String: true,
+	},
 }
 
 // Field represents a single field in a configuration.  You can get it
@@ -83,6 +104,7 @@ type Field interface {
 
 type concreteField struct {
 	destination  reflect.Value
+	kind         fieldType
 	required     bool
 	found        bool
 	longFlag     string
@@ -187,17 +209,24 @@ func processField(
 		return nil
 	}
 
-	if _, ok := allowedTypes[field.Type().Kind()]; !ok {
+	kind := invalidFieldType
+	for currentKind, subMap := range allowedTypes {
+		if _, ok := subMap[field.Type().Kind()]; ok {
+			kind = currentKind
+			break
+		}
+	}
+	if kind == invalidFieldType {
 		return fmt.Errorf(
 			"conflag: Type %s is not allowed in configuration structs.",
 			field.Type().Kind().String(),
 		)
 	}
+
 	caseTransition, err := regexp.Compile("([a-z0-9])([A-Z])|([a-z])([A-Z0-9])")
 	if err != nil {
 		return err
 	}
-
 	fileCategory := ""
 	fileKey := strings.ToLower(
 		caseTransition.ReplaceAllString(name, "${1}${3}_${2}${4}"),
@@ -217,6 +246,7 @@ func processField(
 
 	fields[key] = &concreteField{
 		destination:  field,
+		kind:         kind,
 		required:     false,
 		found:        false,
 		longFlag:     longFlag,
