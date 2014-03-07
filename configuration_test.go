@@ -34,6 +34,7 @@ package conflag
 
 import (
 	. "launchpad.net/gocheck"
+	"strings"
 	"testing"
 )
 
@@ -58,79 +59,78 @@ type ConfigSuite struct {
 	dest testConfig
 }
 
-func (s *ConfigSuite) SetUpTest(c *C) {
-	s.dest = testConfig{}
-}
-
-func Test(t *testing.T) {
+func TestConfig(t *testing.T) {
 	Suite(&ConfigSuite{})
 	TestingT(t)
 }
 
-func (s *ConfigSuite) TestValidConfig(c *C) {
+func (s *ConfigSuite) SetUpTest(c *C) {
+	s.dest = testConfig{}
+}
+
+func (s *ConfigSuite) TestConfigFileReader(c *C) {
 	config, err := New(&s.dest)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
-	intField := config.Field("IntField").(*concreteField)
-	c.Assert(intField.required, Equals, false)
-	c.Assert(intField.found, Equals, false)
-	c.Assert(intField.longFlag, Equals, "int_field")
-	c.Assert(intField.shortFlag, Equals, int32(0))
-	c.Assert(intField.fileCategory, Equals, "")
-	c.Assert(intField.fileKey, Equals, "int_field")
+	reader := strings.NewReader("config string")
+	config.ConfigReader(reader)
 
-	nestedIntField := config.Field("StructField.IntField").(*concreteField)
-	c.Assert(nestedIntField.required, Equals, false)
-	c.Assert(nestedIntField.found, Equals, false)
-	c.Assert(nestedIntField.longFlag, Equals, "struct_field.int_field")
-	c.Assert(nestedIntField.shortFlag, Equals, int32(0))
-	c.Assert(nestedIntField.fileCategory, Equals, "struct_field")
-	c.Assert(nestedIntField.fileKey, Equals, "int_field")
+	concrete := config.(*concreteConfig)
+	c.Assert(concrete.fileName, Equals, "")
+	c.Assert(concrete.fileRequired, Equals, false)
+	c.Assert(concrete.file, NotNil)
 }
 
-func (s *ConfigSuite) TestFieldModifiers(c *C) {
+func (s *ConfigSuite) TestConfigFileName(c *C) {
 	config, err := New(&s.dest)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
-	stringField := config.Field("StringField").(*concreteField)
-	stringField.
-		Required().
-		ShortFlag('s').
-		LongFlag("string").
-		FileCategory("category").
-		FileKey("key")
-	c.Assert(stringField.required, Equals, true)
-	c.Assert(stringField.shortFlag, Equals, 's')
-	c.Assert(stringField.longFlag, Equals, "string")
-	c.Assert(stringField.fileCategory, Equals, "category")
-	c.Assert(stringField.fileKey, Equals, "key")
+	config.ConfigFile("/file/name")
+
+	concrete := config.(*concreteConfig)
+	c.Assert(concrete.fileName, Equals, "/file/name")
+	c.Assert(concrete.fileRequired, Equals, false)
+	c.Assert(concrete.file, IsNil)
 }
 
-func (s *ConfigSuite) TestNonPointerFails(c *C) {
-	config, err := New(s.dest)
-	c.Assert(err, NotNil)
-	c.Assert(config, IsNil)
+func (s *ConfigSuite) TestConfigFileRequired(c *C) {
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
+
+	config.ConfigFileRequired("/file/name")
+
+	concrete := config.(*concreteConfig)
+	c.Assert(concrete.fileName, Equals, "/file/name")
+	c.Assert(concrete.fileRequired, Equals, true)
+	c.Assert(concrete.file, IsNil)
 }
 
-func (s *ConfigSuite) TestNonStructFails(c *C) {
-	x := 5
-	config, err := New(&x)
-	c.Assert(err, NotNil)
-	c.Assert(config, IsNil)
+func (s *ConfigSuite) TestMultipleConfigFilesFailure(c *C) {
+	defer func() {
+		c.Assert(recover(), NotNil)
+	}()
+
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
+
+	reader := strings.NewReader("config file")
+	config.ConfigReader(reader)
+	config.ConfigFile("/file/name")
 }
 
-func (s *ConfigSuite) TestDeepNestingFails(c *C) {
-	dest := struct{ A struct{ B struct{ C int } } }{}
-	config, err := New(&dest)
-	c.Assert(err, NotNil)
-	c.Assert(config, IsNil)
-}
+func (s *ConfigSuite) TestArgs(c *C) {
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
 
-func (s *ConfigSuite) TestWrongFieldTypeFails(c *C) {
-	dest := struct{ A *int }{}
-	config, err := New(&dest)
-	c.Assert(err, NotNil)
-	c.Assert(config, IsNil)
+	args := []string{"slice", "of", "args"}
+	config.Args(args)
+
+	concrete := config.(*concreteConfig)
+	c.Assert(len(concrete.args), Equals, 3)
+	c.Assert(concrete.args, DeepEquals, []string{"slice", "of", "args"})
 }

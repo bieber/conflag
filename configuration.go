@@ -35,83 +35,10 @@ package conflag
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"reflect"
-	"regexp"
-	"strings"
 )
-
-type fieldType int
-
-const (
-	invalidFieldType fieldType = iota
-	boolFieldType
-	intFieldType
-	uintFieldType
-	floatFieldType
-	stringFieldType
-)
-
-var allowedTypes = map[fieldType]map[reflect.Kind]bool{
-	boolFieldType: map[reflect.Kind]bool{
-		reflect.Bool: true,
-	},
-	intFieldType: map[reflect.Kind]bool{
-		reflect.Int:   true,
-		reflect.Int8:  true,
-		reflect.Int16: true,
-		reflect.Int32: true,
-		reflect.Int64: true,
-	},
-	uintFieldType: map[reflect.Kind]bool{
-		reflect.Uint:   true,
-		reflect.Uint8:  true,
-		reflect.Uint16: true,
-		reflect.Uint32: true,
-		reflect.Uint64: true,
-	},
-	floatFieldType: map[reflect.Kind]bool{
-		reflect.Float32: true,
-		reflect.Float64: true,
-	},
-	stringFieldType: map[reflect.Kind]bool{
-		reflect.String: true,
-	},
-}
-
-// Field represents a single field in a configuration.  You can get it
-// from the Config struct using its Field() method, and then set
-// command-line and config-file properties of the field with it.
-type Field interface {
-	// Required indicates that the field must be specified in either
-	// the config file or a command-line parameter.
-	Required() Field
-
-	// LongFlag sets the long command-line flag for the option, to be
-	// found on the command line in the form --long-flag.
-	LongFlag(flag string) Field
-
-	// ShortFlag sets the short command-line flag for the option, to
-	// be found on the command line in the form -f.
-	ShortFlag(flag rune) Field
-
-	// FileCategory sets the config file category the option will be
-	// found under.  An empty string indicates none.
-	FileCategory(category string) Field
-
-	// FileKey indicates the key in the config file for the option.
-	FileKey(key string) Field
-}
-
-type concreteField struct {
-	destination  reflect.Value
-	kind         fieldType
-	required     bool
-	found        bool
-	longFlag     string
-	shortFlag    rune
-	fileCategory string
-	fileKey      string
-}
 
 // Config defines an interface for representing, manipulating and
 // reading program configuration.  You can create one with New(), set
@@ -125,11 +52,53 @@ type Config interface {
 	// "OuterField.InnerField".  Returns nil for an invalid field
 	// name.
 	Field(field string) Field
+
+	// ConfigReader sets an open io.Reader to read settings directly
+	// from.  The caller is responsible for closing the Reader
+	// afterwards.  If you intend to simply open a file on disk,
+	// consider using the convenience function ConfigFile.
+	ConfigReader(file io.Reader) Config
+
+	// ConfigFile sets a file path to read a config file from.  If the
+	// file is not present or otherwise unopenable, it will simply be
+	// ignored.
+	ConfigFile(fileName string) Config
+
+	// ConfigFileRequired sets a file path to read a config file from,
+	// and requires that the file is readable.  If the file can't be
+	// opened, subsequent calls to Parse will return an error.
+	ConfigFileRequired(fileName string) Config
+
+	// Args sets a slice of command-line arguments to parse settings
+	// from.  If you intend to use the arguments presented on the
+	// command-line by the user, consider using the convenience
+	// function OSArgs.
+	Args(args []string) Config
+
+	// AllowExtraArgs allows the user to enter command-line arguments
+	// after any flags without triggering an error.  usage should
+	// specify the usage text to include for the extra arguments in
+	// the first line of the program usage text.  These arguments will
+	// be returned from Parse.
+	AllowExtraArgs(usage string) Config
+
+	// Parse reads configuration from the available sources into the
+	// specified fields of the config struct.  It returns a slice of
+	// strings with any extra arguments (which will trigger an error
+	// if not explicitly allowed via AllowExtraArgs) and an error
+	// which will be nil if the configuration was processed
+	// successfully.
+	Parse() ([]string, error)
 }
 
 type concreteConfig struct {
-	destination reflect.Value
-	fields      map[string]Field
+	destination      reflect.Value
+	fields           map[string]Field
+	fileName         string
+	file             io.Reader
+	fileRequired     bool
+	args             []string
+	extraArgsAllowed bool
 }
 
 // New creates a new Config based on a destination struct.  The
@@ -165,8 +134,13 @@ func New(destination interface{}) (Config, error) {
 	}
 
 	config := &concreteConfig{
-		destination: destValue,
-		fields:      map[string]Field{},
+		destination:      destValue,
+		fields:           map[string]Field{},
+		fileName:         "",
+		file:             nil,
+		fileRequired:     false,
+		args:             os.Args,
+		extraArgsAllowed: false,
 	}
 	for i := 0; i < destValue.NumField(); i++ {
 		field := destValue.FieldByIndex([]int{i})
@@ -183,109 +157,59 @@ func New(destination interface{}) (Config, error) {
 	return config, nil
 }
 
-func processField(
-	fields map[string]Field,
-	field reflect.Value,
-	prefix string,
-	name string,
-) error {
-	if field.Type().Kind() == reflect.Struct {
-		if prefix != "" {
-			return errors.New(
-				"conflag: Configuration structs may only be nested one level.",
-			)
-		}
-		for i := 0; i < field.NumField(); i++ {
-			err := processField(
-				fields,
-				field.FieldByIndex([]int{i}),
-				name,
-				field.Type().Field(i).Name,
-			)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-
-	kind := invalidFieldType
-	for currentKind, subMap := range allowedTypes {
-		if _, ok := subMap[field.Type().Kind()]; ok {
-			kind = currentKind
-			break
-		}
-	}
-	if kind == invalidFieldType {
-		return fmt.Errorf(
-			"conflag: Type %s is not allowed in configuration structs.",
-			field.Type().Kind().String(),
-		)
-	}
-
-	caseTransition, err := regexp.Compile("([a-z0-9])([A-Z])|([a-z])([A-Z0-9])")
-	if err != nil {
-		return err
-	}
-	fileCategory := ""
-	fileKey := strings.ToLower(
-		caseTransition.ReplaceAllString(name, "${1}${3}_${2}${4}"),
-	)
-	longFlag := fileKey
-	if prefix != "" {
-		fileCategory = strings.ToLower(
-			caseTransition.ReplaceAllString(prefix, "${1}${3}_${2}${4}"),
-		)
-		longFlag = fileCategory + "." + longFlag
-	}
-
-	key := name
-	if prefix != "" {
-		key = prefix + "." + key
-	}
-
-	fields[key] = &concreteField{
-		destination:  field,
-		kind:         kind,
-		required:     false,
-		found:        false,
-		longFlag:     longFlag,
-		shortFlag:    0,
-		fileCategory: fileCategory,
-		fileKey:      fileKey,
-	}
-
-	return nil
-}
-
 func (c *concreteConfig) Field(field string) Field {
 	if val, ok := c.fields[field]; ok {
 		return val
 	}
-	return nil
+	panic(
+		fmt.Errorf(
+			"Field %s isn't present in your configuration struct.",
+			field,
+		),
+	)
 }
 
-func (f *concreteField) Required() Field {
-	f.required = true
-	return f
+func (c *concreteConfig) ConfigReader(file io.Reader) Config {
+	if c.file != nil || c.fileName != "" {
+		panic(
+			errors.New("You have already set a config file for this config."),
+		)
+	}
+	c.file = file
+	return c
 }
 
-func (f *concreteField) LongFlag(flag string) Field {
-	f.longFlag = flag
-	return f
+func (c *concreteConfig) ConfigFile(fileName string) Config {
+	if c.file != nil || c.fileName != "" {
+		panic(
+			errors.New("You have already set a config file for this config."),
+		)
+	}
+	c.fileName = fileName
+	return c
 }
 
-func (f *concreteField) ShortFlag(flag rune) Field {
-	f.shortFlag = flag
-	return f
+func (c *concreteConfig) ConfigFileRequired(fileName string) Config {
+	if c.file != nil || c.fileName != "" {
+		panic(
+			errors.New("You have already set a config file for this config."),
+		)
+	}
+	c.fileName = fileName
+	c.fileRequired = true
+	return c
 }
 
-func (f *concreteField) FileCategory(category string) Field {
-	f.fileCategory = category
-	return f
+func (c *concreteConfig) Args(args []string) Config {
+	c.args = args
+	return c
 }
 
-func (f *concreteField) FileKey(key string) Field {
-	f.fileKey = key
-	return f
+func (c *concreteConfig) AllowExtraArgs(usage string) Config {
+	c.extraArgsAllowed = true
+	return c
+}
+
+func (c *concreteConfig) Parse() ([]string, error) {
+	return nil, errors.New("Not implemented yet.")
 }
