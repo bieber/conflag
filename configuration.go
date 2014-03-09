@@ -93,7 +93,7 @@ type Config interface {
 
 type concreteConfig struct {
 	destination      reflect.Value
-	fields           map[string]Field
+	fields           map[string]*concreteField
 	fileName         string
 	file             io.Reader
 	fileRequired     bool
@@ -135,7 +135,7 @@ func New(destination interface{}) (Config, error) {
 
 	config := &concreteConfig{
 		destination:      destValue,
-		fields:           map[string]Field{},
+		fields:           map[string]*concreteField{},
 		fileName:         "",
 		file:             nil,
 		fileRequired:     false,

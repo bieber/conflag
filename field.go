@@ -111,6 +111,7 @@ type concreteField struct {
 	usage        string
 	required     bool
 	found        bool
+	parsedValue  string
 	longFlag     string
 	shortFlag    rune
 	fileCategory string
@@ -118,7 +119,7 @@ type concreteField struct {
 }
 
 func processField(
-	fields map[string]Field,
+	fields map[string]*concreteField,
 	field reflect.Value,
 	prefix string,
 	name string,
@@ -184,6 +185,7 @@ func processField(
 		kind:         kind,
 		required:     false,
 		found:        false,
+		parsedValue:  "",
 		longFlag:     longFlag,
 		shortFlag:    0,
 		fileCategory: fileCategory,
@@ -214,11 +216,17 @@ func (f *concreteField) ShortFlag(flag rune) Field {
 }
 
 func (f *concreteField) FileCategory(category string) Field {
+	if strings.Contains(category, ".") {
+		panic(errors.New("File category names cannot include '.'"))
+	}
 	f.fileCategory = category
 	return f
 }
 
 func (f *concreteField) FileKey(key string) Field {
+	if strings.Contains(key, ".") {
+		panic(errors.New("File key names cannot include '.'"))
+	}
 	f.fileKey = key
 	return f
 }

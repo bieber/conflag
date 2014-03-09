@@ -37,20 +37,20 @@ import (
 	"testing"
 )
 
-type FlagSuite struct {
+type FieldSuite struct {
 	dest testConfig
 }
 
-func (s *FlagSuite) SetUpTest(c *C) {
+func (s *FieldSuite) SetUpTest(c *C) {
 	s.dest = testConfig{}
 }
 
 func TestFlag(t *testing.T) {
-	Suite(&FlagSuite{})
+	Suite(&FieldSuite{})
 	TestingT(t)
 }
 
-func (s *FlagSuite) TestValidConfig(c *C) {
+func (s *FieldSuite) TestValidConfig(c *C) {
 	config, err := New(&s.dest)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
@@ -74,7 +74,7 @@ func (s *FlagSuite) TestValidConfig(c *C) {
 	c.Assert(nestedIntField.fileKey, Equals, "int_field")
 }
 
-func (s *FlagSuite) TestFieldModifiers(c *C) {
+func (s *FieldSuite) TestFieldModifiers(c *C) {
 	config, err := New(&s.dest)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
@@ -93,29 +93,53 @@ func (s *FlagSuite) TestFieldModifiers(c *C) {
 	c.Assert(stringField.fileKey, Equals, "key")
 }
 
-func (s *FlagSuite) TestNonPointerFails(c *C) {
+func (s *FieldSuite) TestNonPointerFails(c *C) {
 	config, err := New(s.dest)
 	c.Assert(err, NotNil)
 	c.Assert(config, IsNil)
 }
 
-func (s *FlagSuite) TestNonStructFails(c *C) {
+func (s *FieldSuite) TestNonStructFails(c *C) {
 	x := 5
 	config, err := New(&x)
 	c.Assert(err, NotNil)
 	c.Assert(config, IsNil)
 }
 
-func (s *FlagSuite) TestDeepNestingFails(c *C) {
+func (s *FieldSuite) TestDeepNestingFails(c *C) {
 	dest := struct{ A struct{ B struct{ C int } } }{}
 	config, err := New(&dest)
 	c.Assert(err, NotNil)
 	c.Assert(config, IsNil)
 }
 
-func (s *FlagSuite) TestWrongFieldTypeFails(c *C) {
+func (s *FieldSuite) TestWrongFieldTypeFails(c *C) {
 	dest := struct{ A *int }{}
 	config, err := New(&dest)
 	c.Assert(err, NotNil)
 	c.Assert(config, IsNil)
+}
+
+func (s *FieldSuite) TestCategoryWithDotFails(c *C) {
+	defer func() {
+		c.Assert(recover(), NotNil)
+	}()
+
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
+
+	config.Field("UintField").FileCategory("test.category")
+}
+
+func (s *FieldSuite) TestKeyWithDotFails(c *C) {
+	defer func() {
+		c.Assert(recover(), NotNil)
+	}()
+
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
+
+	config.Field("UintField").FileKey("test.key")
 }
