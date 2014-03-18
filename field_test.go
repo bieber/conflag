@@ -91,6 +91,35 @@ func (s *FieldSuite) TestFieldModifiers(c *C) {
 	c.Assert(stringField.longFlag, Equals, "string")
 	c.Assert(stringField.fileCategory, Equals, "category")
 	c.Assert(stringField.fileKey, Equals, "key")
+
+	boolField := config.Field("BoolField").(*concreteField)
+	boolField.
+		InverseShortFlag('i').
+		InverseLongFlag("inverse-bool")
+	c.Assert(boolField.inverseShortFlag, Equals, 'i')
+	c.Assert(boolField.inverseLongFlag, Equals, "inverse-bool")
+}
+
+func (s *FieldSuite) TestInverseShortFlagFailure(c *C) {
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
+
+	defer func() {
+		c.Assert(recover(), NotNil)
+	}()
+	config.Field("StringField").InverseShortFlag('i')
+}
+
+func (s *FieldSuite) TestInverseLongFlagFailure(c *C) {
+	config, err := New(&s.dest)
+	c.Assert(err, IsNil)
+	c.Assert(config, NotNil)
+
+	defer func() {
+		c.Assert(recover(), NotNil)
+	}()
+	config.Field("StringField").InverseLongFlag("inverse")
 }
 
 func (s *FieldSuite) TestNonPointerFails(c *C) {
