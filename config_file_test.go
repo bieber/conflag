@@ -69,8 +69,7 @@ func (s *ConfigFileSuite) TestSuccessfulRead(c *C) {
 		bool_field = true
 
 		[bool_category]
-		bool_key = false
-`
+		bool_key = false`
 
 	reader := strings.NewReader(file)
 	err := readConfigFile(s.fields, reader)

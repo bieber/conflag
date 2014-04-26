@@ -41,12 +41,11 @@ import (
 
 func readConfigFile(dest map[string]*concreteField, src io.Reader) error {
 	fields := buildConfigFileIndex(dest)
-	bufReader := bufio.NewReader(src)
+	scanner := bufio.NewScanner(src)
 
 	category := ""
-	line, err := bufReader.ReadString('\n')
-	for ; err == nil; line, err = bufReader.ReadString('\n') {
-		line = strings.TrimSpace(line)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
 		if len(line) == 0 || line[0] == '#' {
 			continue
 		}
@@ -73,8 +72,8 @@ func readConfigFile(dest map[string]*concreteField, src io.Reader) error {
 		field.parsedValue = value
 		field.found = true
 	}
-	if err != io.EOF {
-		return err
+	if scanner.Err() != nil {
+		return scanner.Err()
 	}
 	return nil
 }
