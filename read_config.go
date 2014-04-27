@@ -33,66 +33,9 @@
 package conflag
 
 import (
-	"bufio"
-	"fmt"
-	"io"
-	"strings"
+	"errors"
 )
 
-func readConfigFile(dest map[string]*concreteField, src io.Reader) error {
-	fields := buildConfigFileIndex(dest)
-	scanner := bufio.NewScanner(src)
-
-	category := ""
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if len(line) == 0 || line[0] == '#' {
-			continue
-		}
-
-		if line[0] == '[' && line[len(line)-1] == ']' {
-			category = strings.TrimSpace(line[1 : len(line)-1])
-			continue
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("Invalid configuration line: %s", line)
-		}
-		key := strings.TrimSpace(parts[0])
-		if category != "" {
-			key = category + "." + key
-		}
-		value := strings.TrimSpace(parts[1])
-
-		if _, ok := fields[key]; !ok {
-			return fmt.Errorf("Invalid configuration file key: %s", key)
-		}
-		field := fields[key]
-		field.parsedValue = value
-		field.found = true
-	}
-	if scanner.Err() != nil {
-		return scanner.Err()
-	}
-	if closer, ok := src.(io.Closer); ok {
-		closer.Close()
-	}
-	return nil
-}
-
-// Get fields indexed by their file category and key instead of config struct
-func buildConfigFileIndex(
-	fields map[string]*concreteField,
-) map[string]*concreteField {
-	index := make(map[string]*concreteField, len(fields))
-	for _, v := range fields {
-		if key := v.fileKey; key != "" {
-			if v.fileCategory != "" {
-				key = v.fileCategory + "." + key
-			}
-			index[key] = v
-		}
-	}
-	return index
+func (c *concreteConfig) Read() ([]string, error) {
+	return nil, errors.New("Not implemented yet!")
 }

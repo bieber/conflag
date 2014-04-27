@@ -33,7 +33,7 @@
 package conflag
 
 import (
-	. "launchpad.net/gocheck"
+	. "gopkg.in/check.v1"
 	"strings"
 	"testing"
 )
@@ -100,10 +100,10 @@ func (s *ConfigSuite) TestConfigFileRequired(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
-	config.ConfigFileRequired("/file/name")
+	config.ConfigFileRequired()
 
 	concrete := config.(*concreteConfig)
-	c.Assert(concrete.fileName, Equals, "/file/name")
+	c.Assert(concrete.fileName, Equals, "")
 	c.Assert(concrete.fileRequired, Equals, true)
 	c.Assert(concrete.file, IsNil)
 }

@@ -54,9 +54,9 @@ type Config interface {
 	Field(field string) Field
 
 	// ConfigReader sets an open io.Reader to read settings directly
-	// from.  The caller is responsible for closing the Reader
-	// afterwards.  If you intend to simply open a file on disk,
-	// consider using the convenience function ConfigFile.
+	// from.  If the value also implements io.Closer, it will be
+	// closed after reading.  If you intend to simply open a file on
+	// disk, consider using the convenience function ConfigFile.
 	ConfigReader(file io.Reader) Config
 
 	// ConfigFile sets a file path to read a config file from.  If the
@@ -64,15 +64,28 @@ type Config interface {
 	// ignored.
 	ConfigFile(fileName string) Config
 
-	// ConfigFileRequired sets a file path to read a config file from,
-	// and requires that the file is readable.  If the file can't be
-	// opened, subsequent calls to Parse will return an error.
-	ConfigFileRequired(fileName string) Config
+	// ConfigFileShortFlag sets a short command-line flag with which the
+	// user can specify a config file.  If this option is set and the
+	// user sets a config file, it will take precedence over a file
+	// specified with the ConfigReader or ConfigFile options.
+	ConfigFileShortFlag(flag rune) Config
+
+	// ConfigFileLongFlag sets a long command-line flag with which the
+	// user can specify a config file.  If this option is set and the
+	// user sets a config file, it will take precedence over a file
+	// specified with the ConfigReader or ConfigFile options.
+	ConfigFileLongFlag(flag string) Config
+
+	// ConfigFileRequired requires that a config file path is set (by
+	// calling ConfigFile or ConfigReader, or by command line argument
+	// with ConfigFileShortFlag or ConfigFileLongFlag) and the file
+	// exists.  If the file can't be opened, subsequent calls to Parse
+	// will return an error.
+	ConfigFileRequired() Config
 
 	// Args sets a slice of command-line arguments to parse settings
-	// from.  If you intend to use the arguments presented on the
-	// command-line by the user, consider using the convenience
-	// function OSArgs.
+	// from.  If you don't explicitly set the command-line arguments,
+	// os.Args will be used as the default.
 	Args(args []string) Config
 
 	// AllowExtraArgs allows the user to enter command-line arguments
@@ -82,13 +95,13 @@ type Config interface {
 	// be returned from Parse.
 	AllowExtraArgs(usage string) Config
 
-	// Parse reads configuration from the available sources into the
+	// Read reads configuration from the available sources into the
 	// specified fields of the config struct.  It returns a slice of
 	// strings with any extra arguments (which will trigger an error
 	// if not explicitly allowed via AllowExtraArgs) and an error
 	// which will be nil if the configuration was processed
 	// successfully.
-	Parse() ([]string, error)
+	Read() ([]string, error)
 }
 
 type concreteConfig struct {
@@ -96,6 +109,8 @@ type concreteConfig struct {
 	fields           map[string]*concreteField
 	fileName         string
 	file             io.Reader
+	fileShortFlag    rune
+	fileLongFlag     string
 	fileRequired     bool
 	args             []string
 	extraArgsAllowed bool
@@ -138,6 +153,8 @@ func New(destination interface{}) (Config, error) {
 		fields:           map[string]*concreteField{},
 		fileName:         "",
 		file:             nil,
+		fileShortFlag:    0,
+		fileLongFlag:     "",
 		fileRequired:     false,
 		args:             os.Args,
 		extraArgsAllowed: false,
@@ -189,13 +206,17 @@ func (c *concreteConfig) ConfigFile(fileName string) Config {
 	return c
 }
 
-func (c *concreteConfig) ConfigFileRequired(fileName string) Config {
-	if c.file != nil || c.fileName != "" {
-		panic(
-			errors.New("You have already set a config file for this config."),
-		)
-	}
-	c.fileName = fileName
+func (c *concreteConfig) ConfigFileShortFlag(flag rune) Config {
+	c.fileShortFlag = flag
+	return c
+}
+
+func (c *concreteConfig) ConfigFileLongFlag(flag string) Config {
+	c.fileLongFlag = flag
+	return c
+}
+
+func (c *concreteConfig) ConfigFileRequired() Config {
 	c.fileRequired = true
 	return c
 }
@@ -208,8 +229,4 @@ func (c *concreteConfig) Args(args []string) Config {
 func (c *concreteConfig) AllowExtraArgs(usage string) Config {
 	c.extraArgsAllowed = true
 	return c
-}
-
-func (c *concreteConfig) Parse() ([]string, error) {
-	return nil, errors.New("Not implemented yet.")
 }
