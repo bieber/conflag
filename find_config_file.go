@@ -33,14 +33,12 @@
 package conflag
 
 import (
+	"errors"
 	"io"
 	"os"
-	"errors"
 )
 
-func (c *concreteConfig) findConfigFile(
-	args []string,
-) (f io.Reader, err error) {
+func (c *concreteConfig) findConfigFile() (f io.Reader, err error) {
 	err = nil
 	f = c.file
 
@@ -56,8 +54,8 @@ func (c *concreteConfig) findConfigFile(
 			longFlag = "--" + c.fileLongFlag
 		}
 
-		for i := 0; i < len(args)-1; i++ {
-			if args[i] == longFlag || args[i] == shortFlag {
+		for i := 0; i < len(c.args)-1; i++ {
+			if c.args[i] == longFlag || c.args[i] == shortFlag {
 				if foundFlag {
 					if closer, ok := f.(io.Closer); ok {
 						closer.Close()
@@ -68,7 +66,7 @@ func (c *concreteConfig) findConfigFile(
 				} else {
 					foundFlag = true
 				}
-				fileName = args[i+1]
+				fileName = c.args[i+1]
 			}
 		}
 	}
