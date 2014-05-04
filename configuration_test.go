@@ -38,23 +38,6 @@ import (
 	"testing"
 )
 
-type testConfig struct {
-	BoolField    bool
-	UintField    uint
-	IntField     int
-	Float32Field float32
-	Float64Field float64
-	StringField  string
-	StructField  struct {
-		BoolField    bool
-		UintField    uint
-		IntField     int
-		Float32Field float32
-		Float64Field float64
-		StringField  string
-	}
-}
-
 type ConfigSuite struct {
 	dest testConfig
 }

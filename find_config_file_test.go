@@ -42,16 +42,6 @@ import (
 	"testing"
 )
 
-type closerStringReader struct {
-	io.Reader
-	closed bool
-}
-
-func (c *closerStringReader) Close() error {
-	c.closed = true
-	return nil
-}
-
 type FindConfigFileSuite struct {
 	defaultTestFileName   string
 	defaultTestFileReader io.Reader

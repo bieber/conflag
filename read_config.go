@@ -34,8 +34,91 @@ package conflag
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 )
 
 func (c *concreteConfig) Read() ([]string, error) {
-	return nil, errors.New("Not implemented yet!")
+	fin, err := c.findConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	if fin == nil && c.fileRequired {
+		return nil, errors.New("conflag: Required config file not found.")
+	}
+
+	if fin != nil {
+		err = readConfigFile(c.fields, fin)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	extraArgs, err := readCommandLineFlags(c.fields, c.args, c.extraArgsAllowed)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, field := range c.fields {
+		err := field.readValue()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return extraArgs, nil
+}
+
+// Attempts to read the raw string value from the struct and fill in
+// the corresponding field in the destination
+func (f *concreteField) readValue() error {
+	if !f.found {
+		if f.required {
+			return fmt.Errorf(
+				"conflag: Required configuration value %s not found.",
+				f.usage,
+			)
+		}
+		return nil
+	}
+
+	switch f.kind {
+	case boolFieldType:
+		val := false
+		if f.parsedValue == "true" {
+			val = true
+		}
+		f.destination.SetBool(val)
+	case intFieldType:
+		val, err := strconv.ParseInt(f.parsedValue, 10, 64)
+		if err != nil {
+			return fmt.Errorf(
+				"conflag: Couldn't parse %s as integer.",
+				f.parsedValue,
+			)
+		}
+		f.destination.SetInt(val)
+	case uintFieldType:
+		val, err := strconv.ParseUint(f.parsedValue, 10, 64)
+		if err != nil {
+			return fmt.Errorf(
+				"conflag: Couldn't parse %s as unsigned integer.",
+				f.parsedValue,
+			)
+		}
+		f.destination.SetUint(val)
+	case floatFieldType:
+		val, err := strconv.ParseFloat(f.parsedValue, 64)
+		if err != nil {
+			return fmt.Errorf(
+				"conflag: Couldn't parse %s as floating point number.",
+				f.parsedValue,
+			)
+		}
+		f.destination.SetFloat(val)
+	case stringFieldType:
+		f.destination.SetString(f.parsedValue)
+	}
+
+	return nil
 }
