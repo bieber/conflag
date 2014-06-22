@@ -178,12 +178,12 @@ func processField(
 	fileKey := strings.ToLower(
 		caseTransition.ReplaceAllString(name, "${1}${3}_${2}${4}"),
 	)
-	longFlag := fileKey
+	longFlag := strings.Replace(fileKey, "_", "-", -1)
 	if prefix != "" {
 		fileCategory = strings.ToLower(
 			caseTransition.ReplaceAllString(prefix, "${1}${3}_${2}${4}"),
 		)
-		longFlag = fileCategory + "." + longFlag
+		longFlag = strings.Replace(fileCategory, "_", "-", -1) + "." + longFlag
 	}
 
 	key := name
