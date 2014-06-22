@@ -156,7 +156,7 @@ func New(destination interface{}) (Config, error) {
 		fileShortFlag:    0,
 		fileLongFlag:     "",
 		fileRequired:     false,
-		args:             os.Args,
+		args:             os.Args[1:],
 		extraArgsAllowed: false,
 	}
 	for i := 0; i < destValue.NumField(); i++ {
