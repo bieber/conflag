@@ -87,7 +87,7 @@ func TestFindConfigFile(t *testing.T) {
 
 func (s *FindConfigFileSuite) TestNothing(c *C) {
 	s.config.Args([]string{"some", "random", "flags"})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(fin, IsNil)
 	c.Assert(err, IsNil)
 }
@@ -95,7 +95,7 @@ func (s *FindConfigFileSuite) TestNothing(c *C) {
 func (s *FindConfigFileSuite) TestDefaultReader(c *C) {
 	s.config.ConfigReader(s.defaultTestFileReader)
 	s.config.Args([]string{"some", "random", "flags"})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	assertFileContents(c, fin, "DEFAULT_READER")
 }
@@ -103,7 +103,7 @@ func (s *FindConfigFileSuite) TestDefaultReader(c *C) {
 func (s *FindConfigFileSuite) TestDefaultFile(c *C) {
 	s.config.ConfigFile(s.defaultTestFileName)
 	s.config.Args([]string{"some", "random", "flags"})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	assertFileContents(c, fin, "DEFAULT_FILE")
 }
@@ -111,7 +111,7 @@ func (s *FindConfigFileSuite) TestDefaultFile(c *C) {
 func (s *FindConfigFileSuite) TestShortFlag(c *C) {
 	s.config.ConfigFileShortFlag('c')
 	s.config.Args([]string{"-c", s.extraTestFileName})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	assertFileContents(c, fin, "EXTRA_FILE")
 }
@@ -119,7 +119,7 @@ func (s *FindConfigFileSuite) TestShortFlag(c *C) {
 func (s *FindConfigFileSuite) TestLongFlag(c *C) {
 	s.config.ConfigFileLongFlag("config-file")
 	s.config.Args([]string{"--config-file", s.extraTestFileName})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	assertFileContents(c, fin, "EXTRA_FILE")
 }
@@ -132,7 +132,7 @@ func (s *FindConfigFileSuite) TestShortFlagOverrideReader(c *C) {
 	s.config.ConfigReader(reader)
 	s.config.ConfigFileShortFlag('c')
 	s.config.Args([]string{"-c", s.extraTestFileName})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	c.Assert(reader.closed, Equals, true)
 	assertFileContents(c, fin, "EXTRA_FILE")
@@ -142,7 +142,7 @@ func (s *FindConfigFileSuite) TestShortFlagOverrideFileName(c *C) {
 	s.config.ConfigFile(s.defaultTestFileName)
 	s.config.ConfigFileShortFlag('c')
 	s.config.Args([]string{"-c", s.extraTestFileName})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	assertFileContents(c, fin, "EXTRA_FILE")
 }
@@ -155,7 +155,7 @@ func (s *FindConfigFileSuite) TestLongFlagOverrideFileReader(c *C) {
 	s.config.ConfigReader(reader)
 	s.config.ConfigFileLongFlag("config-file")
 	s.config.Args([]string{"--config-file", s.extraTestFileName})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	c.Assert(reader.closed, Equals, true)
 	assertFileContents(c, fin, "EXTRA_FILE")
@@ -165,7 +165,7 @@ func (s *FindConfigFileSuite) TestLongFlagOverrideFileName(c *C) {
 	s.config.ConfigFile(s.defaultTestFileName)
 	s.config.ConfigFileLongFlag("config-file")
 	s.config.Args([]string{"--config-file", s.extraTestFileName})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(err, IsNil)
 	assertFileContents(c, fin, "EXTRA_FILE")
 }
@@ -179,22 +179,31 @@ func (s *FindConfigFileSuite) TestMultipleFlags(c *C) {
 	s.config.ConfigFileShortFlag('c')
 	s.config.ConfigFileLongFlag("config-file")
 	s.config.Args([]string{"-c", "file", "--config-file", "otherfile"})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(fin, IsNil)
 	c.Assert(err, NotNil)
 	c.Assert(reader.closed, Equals, true)
 }
 
+func (s *FindConfigFileSuite) TestFileNameRemoval(c *C) {
+	s.config.ConfigFileLongFlag("config-file")
+	s.config.Args([]string{"a", "b", "--config-file", s.defaultTestFileName})
+	fin, args, err := s.config.findConfigFile()
+	c.Assert(fin, NotNil)
+	c.Assert(err, IsNil)
+	c.Assert(args, DeepEquals, []string{"a", "b"})
+}
+
 func (s *FindConfigFileSuite) TestMissingFile(c *C) {
 	s.config.ConfigFileShortFlag('c')
 	s.config.Args([]string{"-c", "/missing/file/"})
-	fin, err := s.config.findConfigFile()
+	fin, _, err := s.config.findConfigFile()
 	c.Assert(fin, IsNil)
 	c.Assert(err, NotNil)
 
 	s.config.ConfigFile("/missing/file/")
 	s.config.Args([]string{"-c", "/missing/file"})
-	fin, err = s.config.findConfigFile()
+	fin, _, err = s.config.findConfigFile()
 	c.Assert(fin, IsNil)
 	c.Assert(err, NotNil)
 }

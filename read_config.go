@@ -39,7 +39,7 @@ import (
 )
 
 func (c *concreteConfig) Read() ([]string, error) {
-	fin, err := c.findConfigFile()
+	fin, args, err := c.findConfigFile()
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (c *concreteConfig) Read() ([]string, error) {
 		}
 	}
 
-	extraArgs, err := readCommandLineFlags(c.fields, c.args, c.extraArgsAllowed)
+	extraArgs, err := readCommandLineFlags(c.fields, args, c.extraArgsAllowed)
 	if err != nil {
 		return nil, err
 	}

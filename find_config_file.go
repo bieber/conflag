@@ -38,9 +38,14 @@ import (
 	"os"
 )
 
-func (c *concreteConfig) findConfigFile() (f io.Reader, err error) {
+func (c *concreteConfig) findConfigFile() (
+	f io.Reader,
+	args []string,
+	err error,
+) {
 	err = nil
 	f = c.file
+	args = c.args
 
 	fileName := c.fileName
 	foundFlag := false
@@ -54,8 +59,8 @@ func (c *concreteConfig) findConfigFile() (f io.Reader, err error) {
 			longFlag = "--" + c.fileLongFlag
 		}
 
-		for i := 0; i < len(c.args)-1; i++ {
-			if c.args[i] == longFlag || c.args[i] == shortFlag {
+		for i := len(args) - 1; i >= 0; i-- {
+			if args[i] == longFlag || args[i] == shortFlag {
 				if foundFlag {
 					if closer, ok := f.(io.Closer); ok {
 						closer.Close()
@@ -66,7 +71,16 @@ func (c *concreteConfig) findConfigFile() (f io.Reader, err error) {
 				} else {
 					foundFlag = true
 				}
-				fileName = c.args[i+1]
+
+				if i+1 > len(args)-1 {
+					err = errors.New("conflag: Missing config file name")
+					return
+				}
+
+				fileName = args[i+1]
+				// Removing file names and flags from the args so they
+				// don't cause problems later
+				args = append(args[:i], args[i+2:]...)
 			}
 		}
 	}
