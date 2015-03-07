@@ -45,6 +45,14 @@ import (
 // your desired options on it, and then read your program's
 // configuration using Read().
 type Config interface {
+	// ProgramName sets a name for the program to display in the usage
+	// text.
+	ProgramName(name string) Config
+
+	// ProgramDescription sets a description of the program to display
+	// in the usage text.
+	ProgramDescription(description string) Config
+
 	// Field retrieves an individual field from the configuration for
 	// you to modify.  It expects a field name matching an exported
 	// field in the destination configuration struct.  To access a
@@ -102,11 +110,22 @@ type Config interface {
 	// which will be nil if the configuration was processed
 	// successfully.
 	Read() ([]string, error)
+
+	// Usage returns usage information for the program from the
+	// config, formatted for the given terminal width.  The minimum
+	// width is 10 columns (any lower values will be treated as 10),
+	// and at very small widths it cannot be guaranteed that the
+	// output will fit strictly within the desired view area, as the
+	// formatter will not break a single word onto multiple lines.
+	Usage(width uint) string
 }
 
 type concreteConfig struct {
+	name             string
+	description      string
 	destination      reflect.Value
 	fields           map[string]*concreteField
+	fieldKeysInOrder []string
 	fileName         string
 	file             io.Reader
 	fileShortFlag    rune
@@ -149,8 +168,11 @@ func New(destination interface{}) (Config, error) {
 	}
 
 	config := &concreteConfig{
+		name:             "",
+		description:      "",
 		destination:      destValue,
 		fields:           map[string]*concreteField{},
+		fieldKeysInOrder: []string{},
 		fileName:         "",
 		file:             nil,
 		fileShortFlag:    0,
@@ -163,6 +185,7 @@ func New(destination interface{}) (Config, error) {
 		field := destValue.FieldByIndex([]int{i})
 		err := processField(
 			config.fields,
+			&config.fieldKeysInOrder,
 			field,
 			"",
 			destValue.Type().Field(i).Name,
@@ -172,6 +195,16 @@ func New(destination interface{}) (Config, error) {
 		}
 	}
 	return config, nil
+}
+
+func (c *concreteConfig) ProgramName(name string) Config {
+	c.name = name
+	return c
+}
+
+func (c *concreteConfig) ProgramDescription(description string) Config {
+	c.description = description
+	return c
 }
 
 func (c *concreteConfig) Field(field string) Field {

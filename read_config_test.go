@@ -161,7 +161,8 @@ func (s *ReadConfigSuite) TestRequiredFileFailure(c *C) {
 
 func (s *ReadConfigSuite) TestRequiredFieldFailure(c *C) {
 	s.config.Args([]string{}).
-		Field("IntField").Usage("integer").Required()
+		Field("IntField").
+		Required()
 	extraArgs, err := s.config.Read()
 	c.Assert(extraArgs, IsNil)
 	c.Assert(err, NotNil)

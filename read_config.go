@@ -76,7 +76,7 @@ func (f *concreteField) readValue() error {
 		if f.required {
 			return fmt.Errorf(
 				"conflag: Required configuration value %s not found.",
-				f.usage,
+				f.description,
 			)
 		}
 		return nil

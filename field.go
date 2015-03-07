@@ -82,8 +82,9 @@ var allowedTypes = map[fieldType]map[reflect.Kind]bool{
 // from the Config struct using its Field() method, and then set
 // command-line and config-file properties of the field with it.
 type Field interface {
-	// Usage sets the usage text to display for the given field.
-	Usage(usage string) Field
+	// Description sets the description to use in the usage text for
+	// the given field.
+	Description(usage string) Field
 
 	// Required indicates that the field must be specified in either
 	// the config file or a command-line parameter.
@@ -118,7 +119,7 @@ type Field interface {
 type concreteField struct {
 	destination      reflect.Value
 	kind             fieldType
-	usage            string
+	description      string
 	required         bool
 	found            bool
 	parsedValue      string
@@ -132,6 +133,7 @@ type concreteField struct {
 
 func processField(
 	fields map[string]*concreteField,
+	fieldKeysInOrder *[]string,
 	field reflect.Value,
 	prefix string,
 	name string,
@@ -145,6 +147,7 @@ func processField(
 		for i := 0; i < field.NumField(); i++ {
 			err := processField(
 				fields,
+				fieldKeysInOrder,
 				field.FieldByIndex([]int{i}),
 				name,
 				field.Type().Field(i).Name,
@@ -192,7 +195,7 @@ func processField(
 	}
 
 	fields[key] = &concreteField{
-		usage:        "",
+		description:  "",
 		destination:  field,
 		kind:         kind,
 		required:     false,
@@ -203,12 +206,13 @@ func processField(
 		fileCategory: fileCategory,
 		fileKey:      fileKey,
 	}
+	*fieldKeysInOrder = append(*fieldKeysInOrder, key)
 
 	return nil
 }
 
-func (f *concreteField) Usage(usage string) Field {
-	f.usage = usage
+func (f *concreteField) Description(description string) Field {
+	f.description = description
 	return f
 }
 
