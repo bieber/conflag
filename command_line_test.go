@@ -38,7 +38,7 @@ import (
 )
 
 type CommandLineSuite struct {
-	fields map[string]*concreteField
+	fields map[string]*Field
 }
 
 func (s *CommandLineSuite) SetUpTest(c *C) {
@@ -57,8 +57,7 @@ func (s *CommandLineSuite) SetUpTest(c *C) {
 		LongFlag("unsigned-int")
 	config.Field("StructField.BoolField").
 		ShortFlag('c')
-	concrete := config.(*concreteConfig)
-	s.fields = concrete.fields
+	s.fields = config.fields
 }
 
 func TestCommandLine(t *testing.T) {
@@ -151,7 +150,6 @@ func (s *CommandLineSuite) TestExpectedArgFailure(c *C) {
 func (s *CommandLineSuite) TestShortFlagCollisionError(c *C) {
 	dest := &testConfig{}
 	config, err := New(dest)
-	concrete := config.(*concreteConfig)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
@@ -164,7 +162,7 @@ func (s *CommandLineSuite) TestShortFlagCollisionError(c *C) {
 		c.Assert(recover(), NotNil)
 	}()
 	readCommandLineFlags(
-		concrete.fields,
+		config.fields,
 		[]string{},
 		false,
 	)
@@ -173,7 +171,6 @@ func (s *CommandLineSuite) TestShortFlagCollisionError(c *C) {
 func (s *CommandLineSuite) TestLongFlagCollisionError(c *C) {
 	dest := &testConfig{}
 	config, err := New(dest)
-	concrete := config.(*concreteConfig)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
@@ -186,7 +183,7 @@ func (s *CommandLineSuite) TestLongFlagCollisionError(c *C) {
 		c.Assert(recover(), NotNil)
 	}()
 	readCommandLineFlags(
-		concrete.fields,
+		config.fields,
 		[]string{},
 		false,
 	)

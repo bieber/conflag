@@ -81,42 +81,7 @@ var allowedTypes = map[fieldType]map[reflect.Kind]bool{
 // Field represents a single field in a configuration.  You can get it
 // from the Config struct using its Field() method, and then set
 // command-line and config-file properties of the field with it.
-type Field interface {
-	// Description sets the description to use in the usage text for
-	// the given field.
-	Description(usage string) Field
-
-	// Required indicates that the field must be specified in either
-	// the config file or a command-line parameter.
-	Required() Field
-
-	// LongFlag sets the long command-line flag for the option, to be
-	// found on the command line in the form --long-flag.
-	LongFlag(flag string) Field
-
-	// InverseLongFlag sets the command-line flag to set the option to
-	// false, to be found on the command line in the form
-	// --inverse-long-flag.  Only usable on boolean fields.
-	InverseLongFlag(flag string) Field
-
-	// ShortFlag sets the short command-line flag for the option, to
-	// be found on the command line in the form -f.
-	ShortFlag(flag rune) Field
-
-	// InverseShortFlag sets the short command-line flag to set the
-	// option to false, to be found on the command line in the form
-	// -i.  Only usable on boolean fields.
-	InverseShortFlag(flag rune) Field
-
-	// FileCategory sets the config file category the option will be
-	// found under.  An empty string indicates none.
-	FileCategory(category string) Field
-
-	// FileKey sets the key in the config file for the option.
-	FileKey(key string) Field
-}
-
-type concreteField struct {
+type Field struct {
 	destination      reflect.Value
 	kind             fieldType
 	description      string
@@ -132,7 +97,7 @@ type concreteField struct {
 }
 
 func processField(
-	fields map[string]*concreteField,
+	fields map[string]*Field,
 	fieldKeysInOrder *[]string,
 	field reflect.Value,
 	prefix string,
@@ -194,7 +159,7 @@ func processField(
 		key = prefix + "." + key
 	}
 
-	fields[key] = &concreteField{
+	fields[key] = &Field{
 		description:  "",
 		destination:  field,
 		kind:         kind,
@@ -211,22 +176,31 @@ func processField(
 	return nil
 }
 
-func (f *concreteField) Description(description string) Field {
+// Description sets the description to use in the usage text for the
+// given field.
+func (f *Field) Description(description string) *Field {
 	f.description = description
 	return f
 }
 
-func (f *concreteField) Required() Field {
+// Required indicates that the field must be specified in either the
+// config file or a command-line parameter.
+func (f *Field) Required() *Field {
 	f.required = true
 	return f
 }
 
-func (f *concreteField) LongFlag(flag string) Field {
+// LongFlag sets the long command-line flag for the option, to be
+// found on the command line in the form --long-flag.
+func (f *Field) LongFlag(flag string) *Field {
 	f.longFlag = flag
 	return f
 }
 
-func (f *concreteField) InverseLongFlag(flag string) Field {
+// InverseLongFlag sets the command-line flag to set the option to
+// false, to be found on the command line in the form
+// --inverse-long-flag.  Only usable on boolean fields.
+func (f *Field) InverseLongFlag(flag string) *Field {
 	f.inverseLongFlag = flag
 	if f.kind != boolFieldType {
 		panic(errors.New("Only boolean fields may have inverse flags."))
@@ -234,12 +208,17 @@ func (f *concreteField) InverseLongFlag(flag string) Field {
 	return f
 }
 
-func (f *concreteField) ShortFlag(flag rune) Field {
+// ShortFlag sets the short command-line flag for the option, to be
+// found on the command line in the form -f.
+func (f *Field) ShortFlag(flag rune) *Field {
 	f.shortFlag = flag
 	return f
 }
 
-func (f *concreteField) InverseShortFlag(flag rune) Field {
+// InverseShortFlag sets the short command-line flag to set the option
+// to false, to be found on the command line in the form -i.  Only
+// usable on boolean fields.
+func (f *Field) InverseShortFlag(flag rune) *Field {
 	f.inverseShortFlag = flag
 	if f.kind != boolFieldType {
 		panic(
@@ -249,7 +228,9 @@ func (f *concreteField) InverseShortFlag(flag rune) Field {
 	return f
 }
 
-func (f *concreteField) FileCategory(category string) Field {
+// FileCategory sets the config file category the option will be found
+// under.  An empty string indicates none.
+func (f *Field) FileCategory(category string) *Field {
 	if strings.Contains(category, ".") {
 		panic(
 			errors.New("conflag: File category names cannot include '.'"),
@@ -259,7 +240,8 @@ func (f *concreteField) FileCategory(category string) Field {
 	return f
 }
 
-func (f *concreteField) FileKey(key string) Field {
+// FileKey sets the key in the config file for the option.
+func (f *Field) FileKey(key string) *Field {
 	if strings.Contains(key, ".") {
 		panic(errors.New("File key names cannot include '.'"))
 	}

@@ -38,7 +38,12 @@ import (
 	"strconv"
 )
 
-func (c *concreteConfig) Read() ([]string, error) {
+// Read reads configuration from the available sources into the
+// specified fields of the config struct.  It returns a slice of
+// strings with any extra arguments (which will trigger an error if
+// not explicitly allowed via AllowExtraArgs) and an error which will
+// be nil if the configuration was processed successfully.
+func (c *Config) Read() ([]string, error) {
 	fin, args, err := c.findConfigFile()
 	if err != nil {
 		return nil, err
@@ -71,7 +76,7 @@ func (c *concreteConfig) Read() ([]string, error) {
 
 // Attempts to read the raw string value from the struct and fill in
 // the corresponding field in the destination
-func (f *concreteField) readValue() error {
+func (f *Field) readValue() error {
 	if !f.found {
 		if f.required {
 			return fmt.Errorf(

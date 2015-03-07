@@ -38,7 +38,7 @@ import (
 	"os"
 )
 
-func (c *concreteConfig) findConfigFile() (
+func (c *Config) findConfigFile() (
 	f io.Reader,
 	args []string,
 	err error,

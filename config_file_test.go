@@ -39,7 +39,7 @@ import (
 )
 
 type ConfigFileSuite struct {
-	fields map[string]*concreteField
+	fields map[string]*Field
 }
 
 func (s *ConfigFileSuite) SetUpTest(c *C) {
@@ -49,8 +49,7 @@ func (s *ConfigFileSuite) SetUpTest(c *C) {
 	c.Assert(config, NotNil)
 
 	config.Field("BoolField").FileCategory("bool_category").FileKey("bool_key")
-	concrete := config.(*concreteConfig)
-	s.fields = concrete.fields
+	s.fields = config.fields
 }
 
 func TestConfigFile(t *testing.T) {
@@ -63,7 +62,7 @@ func (s *ConfigFileSuite) TestSuccessfulRead(c *C) {
 		# Commented out line
 		uint_field = 50
 		float_32_field = 0.5
-		string_field = String! = 
+		string_field = String! =
 
 		[ struct_field ]
 		bool_field = true

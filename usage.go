@@ -40,7 +40,13 @@ const minUsageWidth = 10
 const keyToDescriptionSpacing = 4
 const flagIndentDepth = 2
 
-func (c *concreteConfig) Usage(width uint) string {
+// Usage returns usage information for the program from the config,
+// formatted for the given terminal width.  The minimum width is 10
+// columns (any lower values will be treated as 10), and at very small
+// widths it cannot be guaranteed that the output will fit strictly
+// within the desired view area, as the formatter will not break a
+// single word onto multiple lines.
+func (c *Config) Usage(width uint) string {
 	if width < minUsageWidth {
 		width = minUsageWidth
 	}
@@ -82,7 +88,7 @@ func (c *concreteConfig) Usage(width uint) string {
 }
 
 func formatFieldKeys(
-	fields map[string]*concreteField,
+	fields map[string]*Field,
 	fieldKeysInOrder []string,
 ) (sections []string, maxWidth int) {
 	sections = []string{}

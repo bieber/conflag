@@ -55,7 +55,7 @@ func (s *FieldSuite) TestValidConfig(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
-	intField := config.Field("IntField").(*concreteField)
+	intField := config.Field("IntField")
 	c.Assert(intField.kind, Equals, intFieldType)
 	c.Assert(intField.required, Equals, false)
 	c.Assert(intField.found, Equals, false)
@@ -64,7 +64,7 @@ func (s *FieldSuite) TestValidConfig(c *C) {
 	c.Assert(intField.fileCategory, Equals, "")
 	c.Assert(intField.fileKey, Equals, "int_field")
 
-	nestedIntField := config.Field("StructField.IntField").(*concreteField)
+	nestedIntField := config.Field("StructField.IntField")
 	c.Assert(nestedIntField.kind, Equals, intFieldType)
 	c.Assert(nestedIntField.required, Equals, false)
 	c.Assert(nestedIntField.found, Equals, false)
@@ -79,7 +79,7 @@ func (s *FieldSuite) TestFieldModifiers(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
 
-	stringField := config.Field("StringField").(*concreteField)
+	stringField := config.Field("StringField")
 	stringField.
 		Required().
 		ShortFlag('s').
@@ -92,7 +92,7 @@ func (s *FieldSuite) TestFieldModifiers(c *C) {
 	c.Assert(stringField.fileCategory, Equals, "category")
 	c.Assert(stringField.fileKey, Equals, "key")
 
-	boolField := config.Field("BoolField").(*concreteField)
+	boolField := config.Field("BoolField")
 	boolField.
 		InverseShortFlag('i').
 		InverseLongFlag("inverse-bool")

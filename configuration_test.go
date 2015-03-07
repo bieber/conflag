@@ -59,10 +59,9 @@ func (s *ConfigSuite) TestConfigFileReader(c *C) {
 	reader := strings.NewReader("config string")
 	config.ConfigReader(reader)
 
-	concrete := config.(*concreteConfig)
-	c.Assert(concrete.fileName, Equals, "")
-	c.Assert(concrete.fileRequired, Equals, false)
-	c.Assert(concrete.file, NotNil)
+	c.Assert(config.fileName, Equals, "")
+	c.Assert(config.fileRequired, Equals, false)
+	c.Assert(config.file, NotNil)
 }
 
 func (s *ConfigSuite) TestConfigFileName(c *C) {
@@ -72,10 +71,9 @@ func (s *ConfigSuite) TestConfigFileName(c *C) {
 
 	config.ConfigFile("/file/name")
 
-	concrete := config.(*concreteConfig)
-	c.Assert(concrete.fileName, Equals, "/file/name")
-	c.Assert(concrete.fileRequired, Equals, false)
-	c.Assert(concrete.file, IsNil)
+	c.Assert(config.fileName, Equals, "/file/name")
+	c.Assert(config.fileRequired, Equals, false)
+	c.Assert(config.file, IsNil)
 }
 
 func (s *ConfigSuite) TestConfigFileRequired(c *C) {
@@ -85,10 +83,9 @@ func (s *ConfigSuite) TestConfigFileRequired(c *C) {
 
 	config.ConfigFileRequired()
 
-	concrete := config.(*concreteConfig)
-	c.Assert(concrete.fileName, Equals, "")
-	c.Assert(concrete.fileRequired, Equals, true)
-	c.Assert(concrete.file, IsNil)
+	c.Assert(config.fileName, Equals, "")
+	c.Assert(config.fileRequired, Equals, true)
+	c.Assert(config.file, IsNil)
 }
 
 func (s *ConfigSuite) TestMultipleConfigFilesFailure(c *C) {
@@ -113,7 +110,6 @@ func (s *ConfigSuite) TestArgs(c *C) {
 	args := []string{"slice", "of", "args"}
 	config.Args(args)
 
-	concrete := config.(*concreteConfig)
-	c.Assert(len(concrete.args), Equals, 3)
-	c.Assert(concrete.args, DeepEquals, []string{"slice", "of", "args"})
+	c.Assert(len(config.args), Equals, 3)
+	c.Assert(config.args, DeepEquals, []string{"slice", "of", "args"})
 }

@@ -39,7 +39,7 @@ import (
 	"strings"
 )
 
-func readConfigFile(dest map[string]*concreteField, src io.Reader) error {
+func readConfigFile(dest map[string]*Field, src io.Reader) error {
 	fields := buildConfigFileIndex(dest)
 	scanner := bufio.NewScanner(src)
 
@@ -83,9 +83,9 @@ func readConfigFile(dest map[string]*concreteField, src io.Reader) error {
 
 // Get fields indexed by their file category and key instead of config struct
 func buildConfigFileIndex(
-	fields map[string]*concreteField,
-) map[string]*concreteField {
-	index := make(map[string]*concreteField, len(fields))
+	fields map[string]*Field,
+) map[string]*Field {
+	index := make(map[string]*Field, len(fields))
 	for _, v := range fields {
 		if key := v.fileKey; key != "" {
 			if v.fileCategory != "" {

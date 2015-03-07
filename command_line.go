@@ -38,7 +38,7 @@ import (
 )
 
 func readCommandLineFlags(
-	dest map[string]*concreteField,
+	dest map[string]*Field,
 	src []string,
 	extraArgsAllowed bool,
 ) ([]string, error) {
@@ -103,10 +103,10 @@ func readCommandLineFlags(
 }
 
 func buildFlagIndices(
-	fields map[string]*concreteField,
-) (shortIndex map[rune]*concreteField, longIndex map[string]*concreteField) {
-	shortIndex = make(map[rune]*concreteField, len(fields))
-	longIndex = make(map[string]*concreteField, len(fields))
+	fields map[string]*Field,
+) (shortIndex map[rune]*Field, longIndex map[string]*Field) {
+	shortIndex = make(map[rune]*Field, len(fields))
+	longIndex = make(map[string]*Field, len(fields))
 	for _, v := range fields {
 		for _, shortFlag := range []rune{v.shortFlag, v.inverseShortFlag} {
 			if shortFlag != 0 {

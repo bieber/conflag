@@ -45,7 +45,7 @@ import (
 
 type ReadConfigSuite struct {
 	destination *testConfig
-	config      Config
+	config      *Config
 }
 
 func (s *ReadConfigSuite) SetUpTest(c *C) {

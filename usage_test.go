@@ -38,7 +38,7 @@ import (
 )
 
 type UsageSuite struct {
-	config Config
+	config *Config
 }
 
 func (s *UsageSuite) SetUpTest(c *C) {

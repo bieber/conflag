@@ -46,7 +46,7 @@ type FindConfigFileSuite struct {
 	defaultTestFileName   string
 	defaultTestFileReader io.Reader
 	extraTestFileName     string
-	config                *concreteConfig
+	config                *Config
 }
 
 func (s *FindConfigFileSuite) SetUpTest(c *C) {
@@ -54,7 +54,7 @@ func (s *FindConfigFileSuite) SetUpTest(c *C) {
 	config, err := New(dest)
 	c.Assert(err, IsNil)
 	c.Assert(config, NotNil)
-	s.config = config.(*concreteConfig)
+	s.config = config
 
 	tempDir := c.MkDir()
 

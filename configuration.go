@@ -40,91 +40,14 @@ import (
 	"reflect"
 )
 
-// Config defines an interface for representing, manipulating and
-// reading program configuration.  You can create one with New(), set
-// your desired options on it, and then read your program's
-// configuration using Read().
-type Config interface {
-	// ProgramName sets a name for the program to display in the usage
-	// text.
-	ProgramName(name string) Config
-
-	// ProgramDescription sets a description of the program to display
-	// in the usage text.
-	ProgramDescription(description string) Config
-
-	// Field retrieves an individual field from the configuration for
-	// you to modify.  It expects a field name matching an exported
-	// field in the destination configuration struct.  To access a
-	// subfield of an anonymous struct field, use
-	// "OuterField.InnerField".  Returns nil for an invalid field
-	// name.
-	Field(field string) Field
-
-	// ConfigReader sets an open io.Reader to read settings directly
-	// from.  If the value also implements io.Closer, it will be
-	// closed after reading.  If you intend to simply open a file on
-	// disk, consider using the convenience function ConfigFile.
-	ConfigReader(file io.Reader) Config
-
-	// ConfigFile sets a file path to read a config file from.  If the
-	// file is not present or otherwise unopenable, it will simply be
-	// ignored.
-	ConfigFile(fileName string) Config
-
-	// ConfigFileShortFlag sets a short command-line flag with which the
-	// user can specify a config file.  If this option is set and the
-	// user sets a config file, it will take precedence over a file
-	// specified with the ConfigReader or ConfigFile options.
-	ConfigFileShortFlag(flag rune) Config
-
-	// ConfigFileLongFlag sets a long command-line flag with which the
-	// user can specify a config file.  If this option is set and the
-	// user sets a config file, it will take precedence over a file
-	// specified with the ConfigReader or ConfigFile options.
-	ConfigFileLongFlag(flag string) Config
-
-	// ConfigFileRequired requires that a config file path is set (by
-	// calling ConfigFile or ConfigReader, or by command line argument
-	// with ConfigFileShortFlag or ConfigFileLongFlag) and the file
-	// exists.  If the file can't be opened, subsequent calls to Parse
-	// will return an error.
-	ConfigFileRequired() Config
-
-	// Args sets a slice of command-line arguments to parse settings
-	// from.  If you don't explicitly set the command-line arguments,
-	// os.Args will be used as the default.
-	Args(args []string) Config
-
-	// AllowExtraArgs allows the user to enter command-line arguments
-	// after any flags without triggering an error.  usage should
-	// specify the usage text to include for the extra arguments in
-	// the first line of the program usage text.  These arguments will
-	// be returned from Parse.
-	AllowExtraArgs(usage string) Config
-
-	// Read reads configuration from the available sources into the
-	// specified fields of the config struct.  It returns a slice of
-	// strings with any extra arguments (which will trigger an error
-	// if not explicitly allowed via AllowExtraArgs) and an error
-	// which will be nil if the configuration was processed
-	// successfully.
-	Read() ([]string, error)
-
-	// Usage returns usage information for the program from the
-	// config, formatted for the given terminal width.  The minimum
-	// width is 10 columns (any lower values will be treated as 10),
-	// and at very small widths it cannot be guaranteed that the
-	// output will fit strictly within the desired view area, as the
-	// formatter will not break a single word onto multiple lines.
-	Usage(width uint) string
-}
-
-type concreteConfig struct {
+// Config stores metadata about your configuration.  You can create
+// one with New(), set your desired options on it, and then read your
+// program's configuration using Read().
+type Config struct {
 	name             string
 	description      string
 	destination      reflect.Value
-	fields           map[string]*concreteField
+	fields           map[string]*Field
 	fieldKeysInOrder []string
 	fileName         string
 	file             io.Reader
@@ -152,7 +75,7 @@ type concreteConfig struct {
 // style, if it exists.  The long-form command-line flag will be the
 // same as the file key for top-level fields, and for nested fields it
 // will be of the form category_name.field_name.
-func New(destination interface{}) (Config, error) {
+func New(destination interface{}) (*Config, error) {
 	destValue := reflect.ValueOf(destination)
 
 	if destValue.Type().Kind() != reflect.Ptr {
@@ -167,11 +90,11 @@ func New(destination interface{}) (Config, error) {
 		)
 	}
 
-	config := &concreteConfig{
+	config := &Config{
 		name:             "",
 		description:      "",
 		destination:      destValue,
-		fields:           map[string]*concreteField{},
+		fields:           map[string]*Field{},
 		fieldKeysInOrder: []string{},
 		fileName:         "",
 		file:             nil,
@@ -197,17 +120,26 @@ func New(destination interface{}) (Config, error) {
 	return config, nil
 }
 
-func (c *concreteConfig) ProgramName(name string) Config {
+// ProgramName sets a name for the program to display in the usage
+// text.
+func (c *Config) ProgramName(name string) *Config {
 	c.name = name
 	return c
 }
 
-func (c *concreteConfig) ProgramDescription(description string) Config {
+// ProgramDescription sets a description of the program to display in
+// the usage text.
+func (c *Config) ProgramDescription(description string) *Config {
 	c.description = description
 	return c
 }
 
-func (c *concreteConfig) Field(field string) Field {
+// Field retrieves an individual field from the configuration for you
+// to modify.  It expects a field name matching an exported field in
+// the destination configuration struct.  To access a subfield of an
+// anonymous struct field, use "OuterField.InnerField".  Returns nil
+// for an invalid field name.
+func (c *Config) Field(field string) *Field {
 	if val, ok := c.fields[field]; ok {
 		return val
 	}
@@ -219,7 +151,11 @@ func (c *concreteConfig) Field(field string) Field {
 	)
 }
 
-func (c *concreteConfig) ConfigReader(file io.Reader) Config {
+// ConfigReader sets an open io.Reader to read settings directly from.
+// If the value also implements io.Closer, it will be closed after
+// reading.  If you intend to simply open a file on disk, consider
+// using the convenience function ConfigFile.
+func (c *Config) ConfigReader(file io.Reader) *Config {
 	if c.file != nil || c.fileName != "" {
 		panic(
 			errors.New("You have already set a config file for this config."),
@@ -229,7 +165,10 @@ func (c *concreteConfig) ConfigReader(file io.Reader) Config {
 	return c
 }
 
-func (c *concreteConfig) ConfigFile(fileName string) Config {
+// ConfigFile sets a file path to read a config file from.  If the
+// file is not present or otherwise unopenable, it will simply be
+// ignored.
+func (c *Config) ConfigFile(fileName string) *Config {
 	if c.file != nil || c.fileName != "" {
 		panic(
 			errors.New("You have already set a config file for this config."),
@@ -239,27 +178,48 @@ func (c *concreteConfig) ConfigFile(fileName string) Config {
 	return c
 }
 
-func (c *concreteConfig) ConfigFileShortFlag(flag rune) Config {
+// ConfigFileShortFlag sets a short command-line flag with which the
+// user can specify a config file.  If this option is set and the user
+// sets a config file, it will take precedence over a file specified
+// with the ConfigReader or ConfigFile options.
+func (c *Config) ConfigFileShortFlag(flag rune) *Config {
 	c.fileShortFlag = flag
 	return c
 }
 
-func (c *concreteConfig) ConfigFileLongFlag(flag string) Config {
+// ConfigFileLongFlag sets a long command-line flag with which the
+// user can specify a config file.  If this option is set and the user
+// sets a config file, it will take precedence over a file specified
+// with the ConfigReader or ConfigFile options.
+func (c *Config) ConfigFileLongFlag(flag string) *Config {
 	c.fileLongFlag = flag
 	return c
 }
 
-func (c *concreteConfig) ConfigFileRequired() Config {
+// ConfigFileRequired requires that a config file path is set (by
+// calling ConfigFile or ConfigReader, or by command line argument
+// with ConfigFileShortFlag or ConfigFileLongFlag) and the file
+// exists.  If the file can't be opened, subsequent calls to Parse
+// will return an error.
+func (c *Config) ConfigFileRequired() *Config {
 	c.fileRequired = true
 	return c
 }
 
-func (c *concreteConfig) Args(args []string) Config {
+// Args sets a slice of command-line arguments to parse settings from.
+// If you don't explicitly set the command-line arguments, os.Args
+// will be used as the default.
+func (c *Config) Args(args []string) *Config {
 	c.args = args
 	return c
 }
 
-func (c *concreteConfig) AllowExtraArgs(usage string) Config {
+// AllowExtraArgs allows the user to enter command-line arguments
+// after any flags without triggering an error.  usage should specify
+// the usage text to include for the extra arguments in the first line
+// of the program usage text.  These arguments will be returned from
+// Parse.
+func (c *Config) AllowExtraArgs(usage string) *Config {
 	c.extraArgsAllowed = true
 	return c
 }
