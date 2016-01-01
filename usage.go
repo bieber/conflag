@@ -58,10 +58,15 @@ func (c *Config) Usage(width uint) string {
 	}
 
 	if c.description != "" {
-		sections = append(
-			sections,
-			restrictWidthByWords(c.description, int(width)),
-		)
+		paragraphs := strings.Split(c.description, "\n")
+		formattedParagraphs := []string{}
+		for _, p := range paragraphs {
+			formattedParagraphs = append(
+				formattedParagraphs,
+				restrictWidthByWords(p, int(width)),
+			)
+		}
+		sections = append(sections, strings.Join(formattedParagraphs, "\n"))
 	}
 
 	keys, keysWidth := formatFieldKeys(c.fields, c.fieldKeysInOrder)
